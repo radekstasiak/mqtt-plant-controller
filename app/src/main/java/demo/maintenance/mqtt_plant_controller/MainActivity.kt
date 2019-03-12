@@ -1,18 +1,18 @@
 package demo.maintenance.mqtt_plant_controller
 
+import android.content.Context
 import android.os.Bundle
 import android.support.design.widget.Snackbar
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
-import android.view.Window
+import android.view.*
 import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import java.io.UnsupportedEncodingException
+import android.os.Vibrator
 
 
 class MainActivity : AppCompatActivity() {
@@ -26,15 +26,20 @@ class MainActivity : AppCompatActivity() {
     val MQTT_TOPIC_GET_WATER_PUMP_STATUS = "getWaterPumpStatus"
     val MQTT_TOPIC_WATER_PUMP_STATUS = "sendWaterPumpStatus"
     val MQTT_TOPIC_HUMIDITY_LEVEL = "hmdtLevel"
+    val MQTT_TOPIC_HUMIDITY_LEVEL_CMD="hmdtLevelCmd"
+
+    val MQTT_TOPIC_AUTOWATERING_CMD="autoWateringCmd";
+    val MQTT_TOPIC_AUTOWATERING_STATUS="autoWateringStatus";
+
     val MQTT_CMD_START = "start"
     val MQTT_CMD_STOP = "stop"
-    val MQTT_CMD_STATUS = "stop"
+    val MQTT_CMD_STATUS = "status"
 
-    var isWaterPumpRunning = false
+    var isAutoModeEnabled = false
     lateinit var hmdtTv: TextView
     val mqttClientId = MqttClient.generateClientId()
     lateinit var mqttClient: MqttAndroidClient
-
+    lateinit var vibrator:Vibrator
 //TODO connect/disconnect on button
 //TODO assign id to the client
 //TODO get connected clients
@@ -48,18 +53,43 @@ class MainActivity : AppCompatActivity() {
             this.applicationContext, "tcp://${MQTT_SERVER_ADDRESS}:${MQTT_PORT}",
             mqttClientId
         )
-        pumpControl.setOnClickListener { view ->
-            if (isWaterPumpRunning) {
-                publish(mqttClient, MQTT_CMD_STOP)
-                isWaterPumpRunning = false
-                Log.d("file", "MQTT_CMD_STOP")
+        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        logo.setOnClickListener { view ->
+            if (isAutoModeEnabled) {
+                publish(mqttClient,MQTT_TOPIC_AUTOWATERING_CMD, MQTT_CMD_STOP)
+                isAutoModeEnabled = false
+                Log.d("file", "${MQTT_TOPIC_AUTOWATERING_CMD}: MQTT_CMD_STOP")
             } else {
-                publish(mqttClient, MQTT_CMD_START)
-                isWaterPumpRunning = true
-                Log.d("file", "MQTT_CMD_START")
+                publish(mqttClient, MQTT_TOPIC_AUTOWATERING_CMD, MQTT_CMD_START)
+                isAutoModeEnabled = true
+                Log.d("file", "${MQTT_TOPIC_AUTOWATERING_CMD}: MQTT_CMD_START")
             }
 
         }
+
+        plantStatusIv.setOnTouchListener(object: View.OnTouchListener{
+            override fun onTouch(view: View?, event: MotionEvent?): Boolean {
+                val action = event?.action
+                if(action == MotionEvent.ACTION_DOWN){
+                    publish(mqttClient, MQTT_TOPIC_WATER_PUMP,MQTT_CMD_START)
+//                    isWaterPumpRunning = false
+                    Log.d("file", "${MQTT_TOPIC_WATER_PUMP}: MQTT_CMD_START")
+                    val pattern = longArrayOf(0, 200, 500)
+
+                    vibrator.vibrate(pattern,0)
+//                    isWaterPumpOn(true)
+                }else if(action == MotionEvent.ACTION_UP){
+                    publish(mqttClient, MQTT_TOPIC_WATER_PUMP,MQTT_CMD_STOP)
+//                    isWaterPumpRunning = true
+                    Log.d("file", "${MQTT_TOPIC_WATER_PUMP}: MQTT_CMD_STOP")
+                    val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                    vibrator.cancel()
+//                    isWaterPumpOn(false)
+                }
+                return true
+            }
+            }
+        )
     }
     private fun updatePlantStatus(status:Int){
         if(status <= 25){
@@ -82,9 +112,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getMqttWaterPumpStatus() {
-        if (mqttClient.isConnected) mqttClient.publish(MQTT_TOPIC_GET_WATER_PUMP_STATUS, MqttMessage("".toByteArray()))
-    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -119,25 +146,41 @@ class MainActivity : AppCompatActivity() {
                     //publish(client,"payloadd");
                     subscribe(mqttClient, MQTT_TOPIC_HUMIDITY_LEVEL)
                     subscribe(mqttClient, MQTT_TOPIC_WATER_PUMP_STATUS)
-                    getMqttWaterPumpStatus()
+                    subscribe(mqttClient, MQTT_TOPIC_AUTOWATERING_STATUS)
+
+                    publish(mqttClient,MQTT_TOPIC_GET_WATER_PUMP_STATUS,"")
+                    publish(mqttClient,MQTT_TOPIC_HUMIDITY_LEVEL_CMD,"")
+                    publish(mqttClient,MQTT_TOPIC_AUTOWATERING_CMD,"status")
+
                     mqttClient.setCallback(object : MqttCallback {
                         override fun connectionLost(cause: Throwable) {
-                            Snackbar.make(hmdtTv.rootView, "Connectio Lost", Snackbar.LENGTH_SHORT).show()
+                            Snackbar.make(plantStatusIv.rootView, "Connectio Lost", Snackbar.LENGTH_SHORT).show()
                         }
 
                         @Throws(Exception::class)
                         override fun messageArrived(topic: String, message: MqttMessage) {
-                            Log.d("file", message.toString())
+                            Log.d("file", "TOPIC: ${topic} MSG:${message.toString()}")
                             if (topic == MQTT_TOPIC_HUMIDITY_LEVEL) {
+//                                vibrator.vibrate(100)
                                 updatePlantStatus(message.toString().toInt())
                             } else if (topic == MQTT_TOPIC_WATER_PUMP_STATUS) {
                                 if (message.toString().equals("1")) {
-                                    isWaterPumpRunning = true;
+//                                    isWaterPumpRunning = true;
+                                    isWaterPumpOn(true)
+
                                 } else {
-                                    isWaterPumpRunning = false;
+//                                    isWaterPumpRunning = false;
+                                    isWaterPumpOn(false)
                                 }
 
                                 Log.d("file", "Water pump status: ${message.toString()}")
+                            }else if(topic == MQTT_TOPIC_AUTOWATERING_STATUS){
+                                if (message.toString().equals("1")) {
+                                    isAutoWateringModeOn(true)
+                                }else{
+                                    isAutoWateringModeOn(false)
+
+                                }
                             }
 
 
@@ -159,10 +202,27 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
     }
-        //TODO update to accept topic as an argument, use throught the activity
-    fun publish(client: MqttAndroidClient, payload: String) {
+
+    private fun isAutoWateringModeOn(isOn: Boolean) {
+        if(isOn){
+            root.setBackgroundColor(ContextCompat.getColor(this,R.color.black))
+            isAutoModeEnabled = true
+        }else{
+            root.setBackgroundColor(ContextCompat.getColor(this,R.color.white))
+            isAutoModeEnabled = false
+        }
+
+    }
+
+    private fun isWaterPumpOn(isOn:Boolean){
+        if(isOn){
+            pumpControl.setImageDrawable(ContextCompat.getDrawable(applicationContext,R.drawable.waterbutton))
+        }else{
+            pumpControl.setImageDrawable(ContextCompat.getDrawable(applicationContext,R.drawable.nowater))
+        }
+    }
+    fun publish(client: MqttAndroidClient,topic:String, payload: String) {
         if (client.isConnected) {
-            val topic = MQTT_TOPIC_WATER_PUMP
             var encodedPayload = ByteArray(0)
             try {
                 encodedPayload = payload.toByteArray(charset("UTF-8"))
