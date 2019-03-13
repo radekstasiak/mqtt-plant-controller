@@ -13,6 +13,10 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen">
+        <meta-data
+                android:name="io.fabric.ApiKey"
+                android:value="61aa0443424211c621ad47f41f0b77ff9557f79f"
+        />
         <service android:name="org.eclipse.paho.android.service.MqttService" />
         <activity
                 android:name=".MainActivity"

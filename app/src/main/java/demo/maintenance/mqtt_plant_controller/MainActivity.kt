@@ -2,17 +2,25 @@ package demo.maintenance.mqtt_plant_controller
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Vibrator
 import android.support.design.widget.Snackbar
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
-import android.view.*
-import android.widget.TextView
+import android.view.Menu
+import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
+import com.crashlytics.android.Crashlytics
+import com.crashlytics.android.answers.Answers
+import com.crashlytics.android.answers.CustomEvent
+import com.crashlytics.android.core.CrashlyticsCore
+import com.squareup.moshi.Moshi
+import io.fabric.sdk.android.Fabric
 import kotlinx.android.synthetic.main.activity_main.*
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import java.io.UnsupportedEncodingException
-import android.os.Vibrator
 
 
 class MainActivity : AppCompatActivity() {
@@ -26,29 +34,45 @@ class MainActivity : AppCompatActivity() {
     val MQTT_TOPIC_GET_WATER_PUMP_STATUS = "getWaterPumpStatus"
     val MQTT_TOPIC_WATER_PUMP_STATUS = "sendWaterPumpStatus"
     val MQTT_TOPIC_HUMIDITY_LEVEL = "hmdtLevel"
-    val MQTT_TOPIC_HUMIDITY_LEVEL_CMD="hmdtLevelCmd"
+    val MQTT_TOPIC_HUMIDITY_LEVEL_CMD = "hmdtLevelCmd"
 
-    val MQTT_TOPIC_AUTOWATERING_CMD="autoWateringCmd";
-    val MQTT_TOPIC_AUTOWATERING_STATUS="autoWateringStatus";
+    val MQTT_TOPIC_AUTOWATERING_CMD = "autoWateringCmd"
+    val MQTT_TOPIC_AUTOWATERING_STATUS = "autoWateringStatus"
+    val MQTT_TOPIC_CURRENT_STATE = "currentState"
 
     val MQTT_CMD_START = "start"
     val MQTT_CMD_STOP = "stop"
     val MQTT_CMD_STATUS = "status"
 
     var isAutoModeEnabled = false
-    lateinit var hmdtTv: TextView
     val mqttClientId = MqttClient.generateClientId()
     lateinit var mqttClient: MqttAndroidClient
-    lateinit var vibrator:Vibrator
-//TODO connect/disconnect on button
+    lateinit var vibrator: Vibrator
+    lateinit var moshi: Moshi
+
+
+    val FABRIC_EVENT_PUMP_STATE_CHANGED = "Pump state changed"
+    val FABRIC_EVENT_ATTRIBUTE_HMDT_RAW_VALUE = "Pump state changed"
+    val FABRIC_EVENT_ATTRIBUTE_HMDT_PERCENTAGE_VALUE = "Pump state changed"
+    val FABRIC_EVENT_ATTRIBUTE_WTER_PUMP_STATUS = "Pump state changed"
+    val FABRIC_EVENT_ATTRIBUTE_AUTO_WATERING_MODE_STATUS = "Pump state changed"
+
+    var sendEventToFabric = false
+    var mqttDeviceState =
+        MqttDeviceState(hmdtPercentageValue = 0, hmdtRawValue = 0, waterPumpStatus = 0, autoWateringModeStatus = 0)
+
+
+    //TODO connect/disconnect on button
 //TODO assign id to the client
 //TODO get connected clients
-//TODO reflect if pump is running or stopped
 //TODO service to receive updates and create notifications
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        Fabric.with(this, Crashlytics())
+        moshi = Moshi.Builder()
+            .build()
         mqttClient = MqttAndroidClient(
             this.applicationContext, "tcp://${MQTT_SERVER_ADDRESS}:${MQTT_PORT}",
             mqttClientId
@@ -56,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         logo.setOnClickListener { view ->
             if (isAutoModeEnabled) {
-                publish(mqttClient,MQTT_TOPIC_AUTOWATERING_CMD, MQTT_CMD_STOP)
+                publish(mqttClient, MQTT_TOPIC_AUTOWATERING_CMD, MQTT_CMD_STOP)
                 isAutoModeEnabled = false
                 Log.d("file", "${MQTT_TOPIC_AUTOWATERING_CMD}: MQTT_CMD_STOP")
             } else {
@@ -67,47 +91,57 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-        plantStatusIv.setOnTouchListener(object: View.OnTouchListener{
+        plantStatusIv.setOnTouchListener(object : View.OnTouchListener {
             override fun onTouch(view: View?, event: MotionEvent?): Boolean {
                 val action = event?.action
-                if(action == MotionEvent.ACTION_DOWN){
-                    publish(mqttClient, MQTT_TOPIC_WATER_PUMP,MQTT_CMD_START)
+                if (action == MotionEvent.ACTION_DOWN) {
+                    publish(mqttClient, MQTT_TOPIC_WATER_PUMP, MQTT_CMD_START)
 //                    isWaterPumpRunning = false
                     Log.d("file", "${MQTT_TOPIC_WATER_PUMP}: MQTT_CMD_START")
-                    val pattern = longArrayOf(0, 200, 500)
-
-                    vibrator.vibrate(pattern,0)
+                    val pattern = longArrayOf(0, 500, 100)
+                    vibrator.vibrate(pattern, 0)
 //                    isWaterPumpOn(true)
-                }else if(action == MotionEvent.ACTION_UP){
-                    publish(mqttClient, MQTT_TOPIC_WATER_PUMP,MQTT_CMD_STOP)
+                    Log.d("file", "Sending Event on water pump start")
+                    Answers.getInstance().logCustom(
+                        CustomEvent(FABRIC_EVENT_PUMP_STATE_CHANGED)
+                            .putCustomAttribute(FABRIC_EVENT_ATTRIBUTE_HMDT_RAW_VALUE, mqttDeviceState.hmdtRawValue)
+                            .putCustomAttribute(
+                                FABRIC_EVENT_ATTRIBUTE_HMDT_PERCENTAGE_VALUE,
+                                mqttDeviceState.hmdtPercentageValue
+                            )
+                            .putCustomAttribute(
+                                FABRIC_EVENT_ATTRIBUTE_WTER_PUMP_STATUS,
+                                mqttDeviceState.waterPumpStatus
+                            )
+                            .putCustomAttribute(
+                                FABRIC_EVENT_ATTRIBUTE_AUTO_WATERING_MODE_STATUS,
+                                mqttDeviceState.autoWateringModeStatus
+                            )
+                    )
+                } else if (action == MotionEvent.ACTION_UP) {
+                    publish(mqttClient, MQTT_TOPIC_WATER_PUMP, MQTT_CMD_STOP)
 //                    isWaterPumpRunning = true
+                    sendEventToFabric = true
                     Log.d("file", "${MQTT_TOPIC_WATER_PUMP}: MQTT_CMD_STOP")
                     val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                     vibrator.cancel()
 //                    isWaterPumpOn(false)
+                } else if (action == MotionEvent.ACTION_MOVE) {
+                    Log.d("file", "ACTION MOVE")
+//                    timeCounter = 0
+//                    getCurrentState()
                 }
                 return true
             }
-            }
+        }
         )
     }
-    private fun updatePlantStatus(status:Int){
-        if(status <= 25){
-            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.plantstate0))
-        }else if(status > 25 && status <= 50){
-            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.plantstate1))
-        }else if (status > 50 && status <=80){
-            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.plantstate2))
-        }else{
-            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.plantstate3))
 
-        }
-    }
 
     override fun onResume() {
         super.onResume()
-        if (!mqttClient.isConnected){
-            Log.d("file","connecting to mqtt")
+        if (!mqttClient.isConnected) {
+            Log.d("file", "connecting to mqtt")
             connect()
         }
     }
@@ -144,44 +178,59 @@ class MainActivity : AppCompatActivity() {
                     // We are connected
                     Log.d("file", "onSuccess")
                     //publish(client,"payloadd");
-                    subscribe(mqttClient, MQTT_TOPIC_HUMIDITY_LEVEL)
-                    subscribe(mqttClient, MQTT_TOPIC_WATER_PUMP_STATUS)
-                    subscribe(mqttClient, MQTT_TOPIC_AUTOWATERING_STATUS)
+//                    subscribe(mqttClient, MQTT_TOPIC_HUMIDITY_LEVEL)
+//                    subscribe(mqttClient, MQTT_TOPIC_WATER_PUMP_STATUS)
+//                    subscribe(mqttClient, MQTT_TOPIC_AUTOWATERING_STATUS)
+                    subscribe(mqttClient, MQTT_TOPIC_CURRENT_STATE)
 
-                    publish(mqttClient,MQTT_TOPIC_GET_WATER_PUMP_STATUS,"")
-                    publish(mqttClient,MQTT_TOPIC_HUMIDITY_LEVEL_CMD,"")
-                    publish(mqttClient,MQTT_TOPIC_AUTOWATERING_CMD,"status")
-
+//                    publish(mqttClient, MQTT_TOPIC_GET_WATER_PUMP_STATUS, "")
+//                    publish(mqttClient, MQTT_TOPIC_HUMIDITY_LEVEL_CMD, "")
+//                    publish(mqttClient, MQTT_TOPIC_AUTOWATERING_CMD, "status")
+                    getCurrentState()
                     mqttClient.setCallback(object : MqttCallback {
                         override fun connectionLost(cause: Throwable) {
-                            Snackbar.make(plantStatusIv.rootView, "Connectio Lost", Snackbar.LENGTH_SHORT).show()
+                            Snackbar.make(plantStatusIv.rootView, "Connection Lost", Snackbar.LENGTH_SHORT).show()
                         }
 
                         @Throws(Exception::class)
                         override fun messageArrived(topic: String, message: MqttMessage) {
                             Log.d("file", "TOPIC: ${topic} MSG:${message.toString()}")
-                            if (topic == MQTT_TOPIC_HUMIDITY_LEVEL) {
-//                                vibrator.vibrate(100)
-                                updatePlantStatus(message.toString().toInt())
-                            } else if (topic == MQTT_TOPIC_WATER_PUMP_STATUS) {
-                                if (message.toString().equals("1")) {
-//                                    isWaterPumpRunning = true;
-                                    isWaterPumpOn(true)
 
-                                } else {
-//                                    isWaterPumpRunning = false;
-                                    isWaterPumpOn(false)
+                            if (topic == MQTT_TOPIC_CURRENT_STATE) {
+                                val jsonAdapter = moshi.adapter<MqttDeviceState>(MqttDeviceState::class.java)
+                                val updatedState = jsonAdapter.fromJson(message.toString())
+                                Log.d("file", "received state: ${updatedState.toString()}")
+                                if (updatedState != null) {
+                                    isAutoWateringModeOn(updatedState)
+                                    isWaterPumpOn(updatedState)
+                                    updatePlantStatus(updatedState)
+                                    mqttDeviceState = updatedState
+//                                    waitingForState = false
                                 }
 
-                                Log.d("file", "Water pump status: ${message.toString()}")
-                            }else if(topic == MQTT_TOPIC_AUTOWATERING_STATUS){
-                                if (message.toString().equals("1")) {
-                                    isAutoWateringModeOn(true)
-                                }else{
-                                    isAutoWateringModeOn(false)
-
-                                }
                             }
+//                            if (topic == MQTT_TOPIC_HUMIDITY_LEVEL) {
+////                                vibrator.vibrate(100)
+//                                updatePlantStatus(message.toString().toInt())
+//                            } else if (topic == MQTT_TOPIC_WATER_PUMP_STATUS) {
+//                                if (message.toString().equals("1")) {
+////                                    isWaterPumpRunning = true;
+//                                    isWaterPumpOn(true)
+//
+//                                } else {
+////                                    isWaterPumpRunning = false;
+//                                    isWaterPumpOn(false)
+//                                }
+//
+//                                Log.d("file", "Water pump status: ${message.toString()}")
+//                            } else if (topic == MQTT_TOPIC_AUTOWATERING_STATUS) {
+//                                if (message.toString().equals("1")) {
+//                                    isAutoWateringModeOn(true)
+//                                } else {
+//                                    isAutoWateringModeOn(false)
+//
+//                                }
+//                            }
 
 
                         }
@@ -203,25 +252,75 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isAutoWateringModeOn(isOn: Boolean) {
-        if(isOn){
-            root.setBackgroundColor(ContextCompat.getColor(this,R.color.black))
-            isAutoModeEnabled = true
-        }else{
-            root.setBackgroundColor(ContextCompat.getColor(this,R.color.white))
-            isAutoModeEnabled = false
+    private fun getCurrentState() {
+//        waitingForState = true
+        publish(mqttClient, MQTT_TOPIC_CURRENT_STATE, MQTT_CMD_STATUS)
+
+    }
+
+    private fun updatePlantStatus(updatedState: MqttDeviceState) {
+        if (updatedState.hmdtPercentageValue <= 25) {
+            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.plantstate0))
+        } else if (updatedState.hmdtPercentageValue > 25 && updatedState.hmdtPercentageValue <= 50) {
+            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.plantstate1))
+        } else if (updatedState.hmdtPercentageValue > 50 && updatedState.hmdtPercentageValue <= 80) {
+            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.plantstate2))
+        } else {
+            plantStatusIv.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.plantstate3))
+
+        }
+    }
+
+
+    private fun isAutoWateringModeOn(updatedState: MqttDeviceState) {
+        if (updatedState.autoWateringModeStatus != mqttDeviceState.autoWateringModeStatus) {
+            if (updatedState.autoWateringModeStatus == 1) {
+                Log.d("file", "updating watering mode with: ${updatedState.autoWateringModeStatus}")
+                root.setBackgroundColor(ContextCompat.getColor(this, R.color.black))
+            } else {
+                Log.d("file", "updating watering mode with: ${updatedState.autoWateringModeStatus}")
+                root.setBackgroundColor(ContextCompat.getColor(this, R.color.white))
+
+            }
         }
 
     }
 
-    private fun isWaterPumpOn(isOn:Boolean){
-        if(isOn){
-            pumpControl.setImageDrawable(ContextCompat.getDrawable(applicationContext,R.drawable.waterbutton))
-        }else{
-            pumpControl.setImageDrawable(ContextCompat.getDrawable(applicationContext,R.drawable.nowater))
+    private fun isWaterPumpOn(updatedState: MqttDeviceState) {
+        if (updatedState.waterPumpStatus != mqttDeviceState.waterPumpStatus) {
+            if (updatedState.waterPumpStatus == 1) {
+                Log.d("file", "updating water pump state with: ${updatedState.waterPumpStatus}")
+                pumpControlOn.visibility = View.VISIBLE
+                pumpControlOff.visibility = View.GONE
+                val pattern = longArrayOf(0, 200, 500)
+                vibrator.cancel()
+                vibrator.vibrate(pattern, 0)
+            } else {
+                Log.d("file", "updating water pump state with: ${updatedState.waterPumpStatus}")
+                pumpControlOn.visibility = View.GONE
+                pumpControlOff.visibility = View.VISIBLE
+                if (sendEventToFabric) {
+                    Log.d("file", "Sending Event on water pump stop")
+                    Answers.getInstance().logCustom(
+                        CustomEvent(FABRIC_EVENT_PUMP_STATE_CHANGED)
+                            .putCustomAttribute(FABRIC_EVENT_ATTRIBUTE_HMDT_RAW_VALUE, updatedState.hmdtRawValue)
+                            .putCustomAttribute(
+                                FABRIC_EVENT_ATTRIBUTE_HMDT_PERCENTAGE_VALUE,
+                                updatedState.hmdtPercentageValue
+                            )
+                            .putCustomAttribute(FABRIC_EVENT_ATTRIBUTE_WTER_PUMP_STATUS, updatedState.waterPumpStatus)
+                            .putCustomAttribute(
+                                FABRIC_EVENT_ATTRIBUTE_AUTO_WATERING_MODE_STATUS,
+                                updatedState.autoWateringModeStatus
+                            )
+                    )
+                    sendEventToFabric = false
+                }
+            }
         }
     }
-    fun publish(client: MqttAndroidClient,topic:String, payload: String) {
+
+    fun publish(client: MqttAndroidClient, topic: String, payload: String) {
         if (client.isConnected) {
             var encodedPayload = ByteArray(0)
             try {
@@ -259,5 +358,15 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
+    }
+
+    private fun crashlytics() {
+        // Set up Crashlytics, disabled for debug builds
+        val crashlyticsKit = Crashlytics.Builder()
+            .core(CrashlyticsCore.Builder().disabled(BuildConfig.DEBUG).build())
+            .build()
+
+// Initialize Fabric with the debug-disabled crashlytics.
+        Fabric.with(this, crashlyticsKit)
     }
 }
