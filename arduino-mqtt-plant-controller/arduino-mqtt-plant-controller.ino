@@ -173,6 +173,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }else if(cmd.equals("status")){
       publishAutoWateringStatus();
     }
+  }else if(String(topic).equals(MQTT_TOPIC_CURRENT_STATE)){
+    if(cmd.equals("status")){
+      publishCurrentState();
+    }
   }
   Serial.println("");
 
@@ -266,6 +270,25 @@ void mqttPublishMoisture(){
   Serial.println("Publishing current state: ");
   Serial.println("");
   int sensorValue = analogRead(A0);
+  
+//  String hmdtRawVal = "{\"hmdt_raw_value\": " + String(sensorValue);
+//  String hmdtPercentageVal = ", \"hmdt_percentage_value\": " + String(map(sensorValue, 1024, 0, 0, 100));
+//  String waterPumpStatus = ", \"water_pump_status\": " + String(waterPumpStatus);
+//  String autoWateringModeStatus = ", \"auto_watering_mode_status\": " + String(autoWateringModeStatus)+"}";
+
+  String jsonValue = "{\"hmdt_raw_value\": " + String(sensorValue);
+   jsonValue += ", \"hmdt_percentage_value\": " + String(map(sensorValue, 1024, 0, 0, 100));
+   jsonValue += ", \"water_pump_status\": " + String(waterPumpStatus);
+   jsonValue += ", \"auto_watering_mode_status\": " + String(autoWateringModeStatus)+"}";
+  
+  char data[300];
+  Serial.println("xxx");
+  Serial.println(jsonValue);
+  Serial.println("xxx");
+  jsonValue.toCharArray(data,(jsonValue.length()+1));
+  
+  Serial.println("");
+  client.publish(MQTT_TOPIC_CURRENT_STATE,data);
  }
 
 
@@ -290,9 +313,9 @@ void reconnect() {
     subscribeForAutoWateringCmd();
     subscribeForCurrentState();
     
-    publishWaterPumpStatus();
-    publishAutoWateringStatus();
-//    publishCurrentState();
+//    publishWaterPumpStatus();
+//    publishAutoWateringStatus();
+    publishCurrentState();
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
