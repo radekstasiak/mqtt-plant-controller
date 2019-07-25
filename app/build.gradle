@@ -6,7 +6,6 @@ apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
 
-
 buildscript {
     repositories {
         maven { url 'https://maven.fabric.io/public' }
@@ -57,12 +56,13 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
     implementation 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
+    implementation 'com.squareup.retrofit2:retrofit:2.6.0'
     compile('com.crashlytics.sdk.android:crashlytics:2.9.9@aar') {
         transitive = true;
     }
     implementation("com.squareup.moshi:moshi:1.7.0")
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.3.11"
-    implementation (
+    implementation(
             [group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.4.1'],
             [group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.4.1'],
             [group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.4.1']
