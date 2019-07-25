@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     var isAutoModeEnabled = false
     val mqttClientId = MqttClient.generateClientId()
     lateinit var mqttClient: MqttAndroidClient
-    lateinit var vibrator: Vibrator
+//    lateinit var vibrator: Vibrator
     lateinit var moshi: Moshi
 
 
@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
             this.applicationContext, "tcp://${MQTT_SERVER_ADDRESS}:${MQTT_PORT}",
             mqttClientId
         )
-        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        //vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         logo.setOnClickListener { view ->
             if (isAutoModeEnabled) {
                 publish(mqttClient, MQTT_TOPIC_AUTOWATERING_CMD, MQTT_CMD_STOP)
@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity() {
 //                    isWaterPumpRunning = false
                     Log.d("file", "${MQTT_TOPIC_WATER_PUMP}: MQTT_CMD_START")
                     val pattern = longArrayOf(0, 500, 100)
-                    vibrator.vibrate(pattern, 0)
+                    //vibrator.vibrate(pattern, 0)
 //                    isWaterPumpOn(true)
                     Log.d("file", "Sending Event on water pump start")
                     Answers.getInstance().logCustom(
@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
                     sendEventToFabric = true
                     Log.d("file", "${MQTT_TOPIC_WATER_PUMP}: MQTT_CMD_STOP")
                     val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                    vibrator.cancel()
+                    //vibrator.cancel()
 //                    isWaterPumpOn(false)
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     Log.d("file", "ACTION MOVE")
@@ -293,8 +293,8 @@ class MainActivity : AppCompatActivity() {
                 pumpControlOn.visibility = View.VISIBLE
                 pumpControlOff.visibility = View.GONE
                 val pattern = longArrayOf(0, 200, 500)
-                vibrator.cancel()
-                vibrator.vibrate(pattern, 0)
+//                vibrator.cancel()
+//                vibrator.vibrate(pattern, 0)
             } else {
                 Log.d("file", "updating water pump state with: ${updatedState.waterPumpStatus}")
                 pumpControlOn.visibility = View.GONE
