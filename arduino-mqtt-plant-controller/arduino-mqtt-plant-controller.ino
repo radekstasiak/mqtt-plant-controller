@@ -6,12 +6,18 @@
 
 int DELAY_LOW=1000;
 
-int MQTT_PUBLISH_STATE_TIMEOUT=15;
+int MQTT_PUBLISH_STATE_TIMEOUT=5;
 int MQTT_LOOP_TIMEOUT=1;
 
 int WATER_PUMP_SAFE_LOCK_TIMEOUT=2;
 int AUTO_WATERING_MODE_TIMEOUT=15;
 
+int SENSOR_MOISTURE_MIN=390;
+int SENSOR_MOISTURE_MAX=859;
+// or 662 as true value when sensor not moved
+String soil_status_wet="wet";
+String soil_status_very_wet="verywet";
+String soil_status_dry="dry";
 char* MQTT_TOPIC_WATER_PUMP_CMD = "waterPump";
 //char* MQTT_TOPIC_GET_WATER_PUMP_STATUS = "getWaterPumpStatus";
 //char* MQTT_TOPIC_SEND_WATER_PUMP_STATUS = "sendWaterPumpStatus";
@@ -22,8 +28,8 @@ char* MQTT_TOPIC_AUTOWATERING_CMD="autoWateringCmd";
 
 char* MQTT_TOPIC_CURRENT_STATE="currentState";
 
-const char* ssid="";
-const char* wifi_pass="";
+const char* ssid="SKY5D769";
+const char* wifi_pass="XPXXSTPR";
 const char* mqtt_server="m24.cloudmqtt.com";
 const char* mqtt_user="vlfnelyd";
 const char* mqtt_pass="nXE1FVBVSJHn";
@@ -92,8 +98,9 @@ void stopAutoWateringMode(){
 
 void waterPumpSafeLock(){
   int sensorValue = analogRead(A0);
-  int numh = map(sensorValue, 1024, 0, 0, 100);
-  if(digitalRead(PIN_PUMP) == 1 && numh > 70){
+//  int numh = map(sensorValue, SENSOR_MOISTURE_MAX, 0, 0, SENSOR_MOISTURE_MIN);
+
+  if(digitalRead(PIN_PUMP) == 1 && getSoilMoistureLevel().equals(soil_status_very_wet)){
     Serial.println("!!! Water pump safe lock !!!");
     stopWaterPump();
   // mqttPublishMoisture();
@@ -106,11 +113,15 @@ void autoWateringMode(){
       Serial.println("Starting reading moisture level...");
       int sensorValue = analogRead(A0);
       delay(DELAY_LOW);
-      int numh = map(sensorValue, 1024, 0, 0, 100);
+//      int numh = map(sensorValue,SENSOR_MOISTURE_MAX, SENSOR_MOISTURE_MIN,0, 100 );
       Serial.print("Current value: ");
-      Serial.print(numh);
+      Serial.print(sensorValue);
       Serial.println("");
-      if(numh < 20 && digitalRead(PIN_PUMP) == 0){
+
+      Serial.print("Current soil moisture level: ");
+      Serial.print(getSoilMoistureLevel());
+      Serial.println("");
+      if(getSoilMoistureLevel() != soil_status_very_wet && digitalRead(PIN_PUMP) == 0){
         startWaterPump();
       }
       
@@ -278,12 +289,17 @@ void subscribeForCurrentState(){
   int sensorValue = analogRead(A0);
   
   String jsonValue = "{\"hmdt_raw_value\": " + String(sensorValue);
-   jsonValue += ", \"hmdt_percentage_value\": " + String(map(sensorValue, 1024, 0, 0, 100));
-   jsonValue += ", \"water_pump_status\": " + String(digitalRead(PIN_PUMP));
-   jsonValue += ", \"auto_watering_mode_status\": " + String(autoWateringModeStatus)+"}";
+//   jsonValue += ", \"hmdt_percentage_value\": " + String(map(sensorValue, SENSOR_MOISTURE_MAX, 0, 0, SENSOR_MOISTURE_MIN));
+   jsonValue += ", \"soil_moisture_status\": \"" + String(getSoilMoistureLevel())+"\"";
+//   jsonValue += ", \"soil_moisture_status\": 1";
+   jsonValue += ", \"plant_id\": " + String(0)+"";
+      jsonValue += ", \"water_pump_status\": " + String(digitalRead(PIN_PUMP))+"}";
+
+//   jsonValue += ", \"auto_watering_mode_status\": " + String(autoWateringModeStatus)+"}";
   
-  char data[300];
+  char data[1024];
   Serial.println(jsonValue);
+  Serial.println(String(jsonValue.length()));
   jsonValue.toCharArray(data,(jsonValue.length()+1));
     client.publish(MQTT_TOPIC_CURRENT_STATE,data);
  }
@@ -321,4 +337,19 @@ void reconnect() {
       delay(5000);
     }
   }
+}
+
+
+String getSoilMoistureLevel(){
+  int soilMoistureValue = analogRead(A0);
+  int intervals = (SENSOR_MOISTURE_MAX-SENSOR_MOISTURE_MIN)/3;
+  if(soilMoistureValue > SENSOR_MOISTURE_MIN && soilMoistureValue < (SENSOR_MOISTURE_MIN + intervals)) {   
+    return soil_status_very_wet;
+  } else if(soilMoistureValue > (SENSOR_MOISTURE_MIN + intervals) && soilMoistureValue < (SENSOR_MOISTURE_MAX - intervals)) {
+    return soil_status_wet;
+  } else if(soilMoistureValue < SENSOR_MOISTURE_MAX && soilMoistureValue > (SENSOR_MOISTURE_MAX - intervals)) {
+    return soil_status_dry;
+  }else{
+    return "unknown";
+  } 
 }
