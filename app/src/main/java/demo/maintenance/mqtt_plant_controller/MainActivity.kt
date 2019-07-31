@@ -1,20 +1,21 @@
 package demo.maintenance.mqtt_plant_controller
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Vibrator
-import android.support.design.widget.Snackbar
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.crashlytics.android.Crashlytics
 import com.crashlytics.android.answers.Answers
 import com.crashlytics.android.answers.CustomEvent
 import com.crashlytics.android.core.CrashlyticsCore
+import com.google.android.material.snackbar.Snackbar
 import com.squareup.moshi.Moshi
 import io.fabric.sdk.android.Fabric
 import kotlinx.android.synthetic.main.activity_main.*
@@ -47,7 +48,7 @@ class MainActivity : AppCompatActivity() {
     var isAutoModeEnabled = false
     val mqttClientId = MqttClient.generateClientId()
     lateinit var mqttClient: MqttAndroidClient
-//    lateinit var vibrator: Vibrator
+    //    lateinit var vibrator: Vibrator
     lateinit var moshi: Moshi
 
 
@@ -368,5 +369,10 @@ class MainActivity : AppCompatActivity() {
 
 // Initialize Fabric with the debug-disabled crashlytics.
         Fabric.with(this, crashlyticsKit)
+    }
+
+    fun viewGraphs(view: View) {
+        val intent = Intent(this, GraphActivity::class.java)
+        startActivity(intent)
     }
 }
