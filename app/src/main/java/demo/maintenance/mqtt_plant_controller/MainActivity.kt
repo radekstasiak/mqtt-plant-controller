@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun viewGraphs(view: View) {
-        val intent = Intent(this, GraphActivity::class.java)
+        val intent = Intent(this, GraphActivityJava::class.java)
         startActivity(intent)
     }
 }
