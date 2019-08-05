@@ -14,6 +14,7 @@ import com.anychart.enums.Anchor;
 import com.anychart.enums.MarkerType;
 import com.anychart.enums.TooltipPositionMode;
 import com.anychart.graphics.vector.Stroke;
+import com.anychart.palettes.RangeColors;
 import demo.maintenance.mqtt_plant_controller.networking.GrowApiService;
 import demo.maintenance.mqtt_plant_controller.networking.entity.Reading;
 import okhttp3.OkHttpClient;
@@ -78,6 +79,8 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
         cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
 
+
+
     }
 
     @Override
@@ -106,7 +109,18 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
         cartesian.legend().fontSize(13d);
         cartesian.legend().padding(0d, 0d, 10d, 0d);
 
+
+        RangeColors palette = RangeColors.instantiate();
+        palette.items("00ff00","#ff0000");
+        palette.count(24);
+        cartesian.yGrid(0).palette(palette);
+
+        //TODO update to read these values from current dataset
+        cartesian.yScale().minimum(470).maximum(710);
+        cartesian.yScale().ticks().interval(10);
+
         anyChartView.setChart(cartesian);
+
 
     }
 
