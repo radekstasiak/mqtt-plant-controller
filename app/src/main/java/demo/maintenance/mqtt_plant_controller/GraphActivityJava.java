@@ -86,8 +86,20 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
     @Override
     public void onResponse(Call<List<Reading>> call, Response<List<Reading>> response) {
         ArrayList<Reading> readings = new ArrayList(response.body());
+        int moistureLevelMinValue=-1;
+        int moistureLevelMaxValue=0;
+
         for (Reading reading : readings) {
             seriesDataEntry.add(new ValueDataEntry(reading.getCreatedAt(), reading.getMoistureLevelStatus()));
+            //get min val
+            if(moistureLevelMinValue != -1){
+                if(moistureLevelMinValue > reading.getMoistureLevelStatus()) moistureLevelMinValue = reading.getMoistureLevelStatus();
+            }else{
+                moistureLevelMinValue =reading.getMoistureLevelStatus();
+            }
+            //get max val
+            if(moistureLevelMaxValue < reading.getMoistureLevelStatus()) moistureLevelMaxValue = reading.getMoistureLevelStatus();
+
         }
 
         Set set = Set.instantiate();
@@ -112,11 +124,12 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
 
         RangeColors palette = RangeColors.instantiate();
         palette.items("00ff00","#ff0000");
-        palette.count(24);
+        int countValue = (moistureLevelMaxValue-moistureLevelMinValue)/10;
+        palette.count(countValue);
         cartesian.yGrid(0).palette(palette);
 
         //TODO update to read these values from current dataset
-        cartesian.yScale().minimum(470).maximum(710);
+        cartesian.yScale().minimum(moistureLevelMinValue).maximum(moistureLevelMaxValue);
         cartesian.yScale().ticks().interval(10);
 
         anyChartView.setChart(cartesian);
