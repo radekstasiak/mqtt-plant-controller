@@ -11,6 +11,7 @@ import com.anychart.core.cartesian.series.Line;
 import com.anychart.data.Mapping;
 import com.anychart.data.Set;
 import com.anychart.enums.Anchor;
+import com.anychart.enums.CrosshairDisplayMode;
 import com.anychart.enums.MarkerType;
 import com.anychart.enums.TooltipPositionMode;
 import com.anychart.graphics.vector.Stroke;
@@ -59,7 +60,7 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
         readings.enqueue(this);
         anyChartView = findViewById(R.id.any_chart_view);
         anyChartView.setProgressBar(findViewById(R.id.progress_bar));
-
+        anyChartView.setZoomEnabled(true);
         cartesian = AnyChart.line();
         cartesian.animation(true);
 
@@ -77,6 +78,7 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
 
         cartesian.yAxis(0).title("Moisture level raw value");
         cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+        cartesian.xAxis(0).labels(false);
 
 
 
@@ -129,7 +131,7 @@ public class GraphActivityJava extends AppCompatActivity implements Callback<Lis
         cartesian.yGrid(0).palette(palette);
 
         //TODO update to read these values from current dataset
-        cartesian.yScale().minimum(moistureLevelMinValue).maximum(moistureLevelMaxValue);
+        cartesian.yScale().minimum(moistureLevelMinValue-10).maximum(moistureLevelMaxValue+10);
         cartesian.yScale().ticks().interval(10);
 
         anyChartView.setChart(cartesian);
