@@ -56,5 +56,19 @@
                 android:textSize="20sp"
                 android:onClick="viewGraphs"
                 android:text="@string/graphs"/>
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ar"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginBottom="13dp"
+                android:layout_marginRight="13dp"
+                android:enabled="false"
+                android:textSize="20sp"
+                android:onClick="viewGraphs"
+                android:text="@string/ar"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

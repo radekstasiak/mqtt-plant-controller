@@ -3,6 +3,7 @@ package demo.maintenance.mqtt_plant_controller
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.os.Vibrator
 import android.util.Log
 import android.view.Menu
@@ -16,6 +17,7 @@ import com.crashlytics.android.answers.Answers
 import com.crashlytics.android.answers.CustomEvent
 import com.crashlytics.android.core.CrashlyticsCore
 import com.google.android.material.snackbar.Snackbar
+import com.google.ar.core.ArCoreApk
 import com.squareup.moshi.Moshi
 import io.fabric.sdk.android.Fabric
 import kotlinx.android.synthetic.main.activity_main.*
@@ -71,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        maybeEnableArButton();
         Fabric.with(this, Crashlytics())
         moshi = Moshi.Builder()
             .build()
@@ -375,4 +378,18 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, GraphActivityJava::class.java)
         startActivity(intent)
     }
+
+    fun maybeEnableArButton() {
+        val availability = ArCoreApk.getInstance().checkAvailability(this)
+        if (availability.isTransient) {
+            // Re-query at 5Hz while compatibility is checked in the background.
+            Handler().postDelayed(Runnable { maybeEnableArButton() }, 200)
+        }
+        if (availability.isSupported) {
+            btn_ar.setEnabled(true)
+        } else { // Unsupported or unknown.
+            btn_ar.setEnabled(false)
+        }
+    }
+
 }
