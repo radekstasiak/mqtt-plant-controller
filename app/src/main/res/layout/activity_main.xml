@@ -68,7 +68,7 @@
                 android:layout_marginRight="13dp"
                 android:enabled="false"
                 android:textSize="20sp"
-                android:onClick="viewGraphs"
+                android:onClick="openArView"
                 android:text="@string/ar"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

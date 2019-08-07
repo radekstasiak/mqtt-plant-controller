@@ -19,6 +19,7 @@ import com.crashlytics.android.core.CrashlyticsCore
 import com.google.android.material.snackbar.Snackbar
 import com.google.ar.core.ArCoreApk
 import com.squareup.moshi.Moshi
+import demo.maintenance.mqtt_plant_controller.ar.AugmentedImageActivity
 import io.fabric.sdk.android.Fabric
 import kotlinx.android.synthetic.main.activity_main.*
 import org.eclipse.paho.android.service.MqttAndroidClient
@@ -390,6 +391,11 @@ class MainActivity : AppCompatActivity() {
         } else { // Unsupported or unknown.
             btn_ar.setEnabled(false)
         }
+    }
+
+    fun openArView(view: View) {
+        val intent = Intent(this, AugmentedImageActivity::class.java)
+        startActivity(intent)
     }
 
 }

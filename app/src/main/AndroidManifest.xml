@@ -34,11 +34,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+                android:name=".ar.AugmentedImageActivity"
+                android:configChanges="orientation|screenSize"
+                android:exported="true"
+                android:screenOrientation="locked"
+                android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <!-- Indicates that the app supports, but does not require ARCore ("AR Optional").
       Unlike "AR Required" apps, the Google Play Store will not automatically
       download and install Google Play Services for AR when the app is installed.-->
-        <meta-data android:name="com.google.ar.core" android:value="optional" />
+        <meta-data
+                android:name="com.google.ar.core"
+                android:value="optional" />
     </application>
 
 </manifest>
