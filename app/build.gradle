@@ -83,3 +83,9 @@ dependencies {
 
 
 }
+
+
+sceneform.asset('sampledata/Mesh_Walrus.gltf',
+        'default',
+        'sampledata/Mesh_Walrus.sfa',
+        'src/main/assets/Mesh_Walrus')
