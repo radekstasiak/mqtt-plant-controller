@@ -1,7 +1,9 @@
 package demo.maintenance.mqtt_plant_controller
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
@@ -28,6 +30,8 @@ import java.io.UnsupportedEncodingException
 
 
 class MainActivity : AppCompatActivity() {
+
+    val MIN_OPENGL_VERSION = 3.0
     val MQTT_SERVER_ADDRESS = "m24.cloudmqtt.com"
     val MQTT_USER = "vlfnelyd"
     val MQTT_PASS = "nXE1FVBVSJHn"
@@ -386,9 +390,15 @@ class MainActivity : AppCompatActivity() {
             // Re-query at 5Hz while compatibility is checked in the background.
             Handler().postDelayed(Runnable { maybeEnableArButton() }, 200)
         }
-        if (availability.isSupported) {
+        val openGlVersionString = (this.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager)
+            .getDeviceConfigurationInfo()
+            .getGlEsVersion();
+        if (availability.isSupported && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+            && openGlVersionString.toDouble() >= MIN_OPENGL_VERSION
+        ) {
             btn_ar.setEnabled(true)
-        } else { // Unsupported or unknown.
+        } else {
+            // Unsupported or unknown.
             btn_ar.setEnabled(false)
         }
     }
