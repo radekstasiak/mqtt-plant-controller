@@ -22,6 +22,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.ar.core.ArCoreApk
 import com.squareup.moshi.Moshi
 import demo.maintenance.mqtt_plant_controller.ar.AugmentedImageActivity
+import demo.maintenance.mqtt_plant_controller.ar.SceneformActivity
 import io.fabric.sdk.android.Fabric
 import kotlinx.android.synthetic.main.activity_main.*
 import org.eclipse.paho.android.service.MqttAndroidClient
@@ -404,7 +405,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun openArView(view: View) {
-        val intent = Intent(this, AugmentedImageActivity::class.java)
+        val intent = Intent(this, SceneformActivity::class.java)
         startActivity(intent)
     }
 
