@@ -16,6 +16,7 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/Theme.MaterialComponents.Light.NoActionBar">
+        <activity android:name=".ar.SceneformActivity"></activity>
         <activity android:name=".GraphActivityJava" />
 
         <meta-data
@@ -40,10 +41,11 @@
                 android:exported="true"
                 android:screenOrientation="locked"
                 android:theme="@style/Theme.AppCompat.NoActionBar" />
-
-        <!-- Indicates that the app supports, but does not require ARCore ("AR Optional").
+        <!--
+ Indicates that the app supports, but does not require ARCore ("AR Optional").
       Unlike "AR Required" apps, the Google Play Store will not automatically
-      download and install Google Play Services for AR when the app is installed.-->
+      download and install Google Play Services for AR when the app is installed.
+        -->
         <meta-data
                 android:name="com.google.ar.core"
                 android:value="optional" />

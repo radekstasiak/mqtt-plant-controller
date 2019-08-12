@@ -23,6 +23,7 @@ buildscript {
 }
 
 apply plugin: 'io.fabric'
+apply plugin: 'com.google.ar.sceneform.plugin'
 
 repositories {
     maven { url 'https://maven.fabric.io/public' }
@@ -77,10 +78,15 @@ dependencies {
 
     // Provides ArFragment, and other UX resources.
     implementation 'com.google.ar.sceneform.ux:sceneform-ux:1.3.0'
-    implementation 'com.google.ar:core:1.3.0'
 
     // Alternatively, use ArSceneView without the UX dependency.
 //    implementation 'com.google.ar.sceneform:core:1.11.0'
 
 
 }
+
+
+sceneform.asset('sampledata/heart.obj',
+        'default',
+        'sampledata/heart.sfa',
+        'src/main/assets/heart')
